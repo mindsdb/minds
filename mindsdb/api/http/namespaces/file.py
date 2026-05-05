@@ -284,7 +284,7 @@ class File(Resource):
             logger.error(e)
             return http_error(
                 500,
-                "Error occured while deleting file",
+                "Error occurred while deleting file",
                 f"There was an error while trying to delete file with name '{name}'",
             )
         return "", 200
