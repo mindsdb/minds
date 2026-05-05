@@ -486,7 +486,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
         limit: int = None,
     ) -> pd.DataFrame:
         """
-        Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
+        Retrieve the data from the SQL statement with eliminated rows that don't satisfy the WHERE condition
         """
         table_name = self._check_table(table_name)
 
