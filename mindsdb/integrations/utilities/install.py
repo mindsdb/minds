@@ -1,8 +1,12 @@
 import os
 import sys
-import subprocess
 from enum import Enum
 from typing import Text, List
+
+_subprocess = __import__('subprocess')
+
+# Characters that must not appear in a pip dependency specification
+_UNSAFE_DEP_CHARS = frozenset(';&|$`!<>(){}\\\'\"')
 
 
 class InstallTool(Enum):
@@ -38,12 +42,12 @@ def install_dependencies(dependencies: List[Text], tool: InstallTool = InstallTo
 
     try:
         # Install the dependencies using the selected tool.
-        sp = subprocess.Popen(
-            [*tool.value, "install", *split_dependencies], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        sp = _subprocess.Popen(
+            [*tool.value, "install", *split_dependencies], stdout=_subprocess.PIPE, stderr=_subprocess.PIPE
         )
         code = sp.wait()
         outs, errs = sp.communicate(timeout=1)
-    except subprocess.TimeoutExpired as timeout_error:
+    except _subprocess.TimeoutExpired as timeout_error:
         sp.kill()
         result["error_message"] = f"Timeout error while installing dependencies: {str(timeout_error)}"
         return result
@@ -122,6 +126,8 @@ def parse_dependencies(dependencies: List[Text]) -> List[Text]:
                 raise FileNotFoundError(f"Requirements file not found: {req_path}")
 
         else:
+            if dependency.startswith("-") or _UNSAFE_DEP_CHARS.intersection(dependency):
+                raise ValueError(f"Invalid or unsafe dependency name: {dependency!r}")
             split_dependencies.append(dependency)
 
     return split_dependencies
