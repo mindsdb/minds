@@ -24,8 +24,6 @@
 
 ---
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/mindsdb/mindsdb)
-
 ## MINDS PLATFORM 
 
 Minds Platform is dedicated to building an open foundation for frontier Artificial Intelligence, designed for developers, businesses, and individuals seeking AI systems they can truly control, extend and deploy anywhere (VPC, on-prem or Cloud).
