@@ -33,3 +33,18 @@ class TestLLM(unittest.TestCase):
         df = pd.DataFrame({"text": user_inputs})
         with self.assertRaises(Exception):
             get_completed_prompts(base_template, df)
+
+    def test_get_completed_prompts_does_not_mutate_dataframe(self):
+        df = pd.DataFrame(
+            {
+                "text": ["What is MindsDB?"],
+                "__mdb_prompt": ["user data"],
+            }
+        )
+
+        prompts, empties = get_completed_prompts("Answer: {{text}}", df)
+
+        assert prompts == ["Answer: What is MindsDB?"]
+        assert empties.shape == (0,)
+        assert df["__mdb_prompt"].tolist() == ["user data"]
+        assert df.columns.tolist() == ["text", "__mdb_prompt"]

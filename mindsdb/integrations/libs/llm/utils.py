@@ -62,7 +62,7 @@ def get_completed_prompts(base_template: str, df: pd.DataFrame, strict=True) -> 
         if strict:
             raise AssertionError("No placeholders found in the prompt, please provide a valid prompt template.")
         prompts = [base_template] * len(df)
-        return prompts, np.ndarray(0)
+        return prompts, np.array([], dtype=int)
 
     first_span = matches[0].start()
     last_span = matches[-1].end()
@@ -80,15 +80,15 @@ def get_completed_prompts(base_template: str, df: pd.DataFrame, strict=True) -> 
 
     empty_prompt_ids = np.where(df[columns].isna().all(axis=1).values)[0]
 
-    df["__mdb_prompt"] = ""
+    completed_prompts = pd.Series("", index=df.index)
     for i in range(len(template)):
         atom = template[i]
         if i < len(columns):
             col = df[columns[i]].replace(to_replace=[None], value="")  # add empty quote if data is missing
-            df["__mdb_prompt"] = df["__mdb_prompt"].apply(lambda x: x + atom) + col.astype("string")
+            completed_prompts = completed_prompts.apply(lambda x: x + atom) + col.astype("string")
         else:
-            df["__mdb_prompt"] = df["__mdb_prompt"].apply(lambda x: x + atom)
-    prompts = list(df["__mdb_prompt"])
+            completed_prompts = completed_prompts.apply(lambda x: x + atom)
+    prompts = list(completed_prompts)
 
     return prompts, empty_prompt_ids
 
