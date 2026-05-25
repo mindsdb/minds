@@ -1062,24 +1062,8 @@
       "destination": "/integrations/data-integrations/yugabytedb"
     },
     {
-      "source": "/custom-model/openai",
-      "destination": "/integrations/ai-engines/openai"
-    },
-    {
-      "source": "/custom-model/huggingface",
-      "destination": "/integrations/ai-engines/huggingface"
-    },
-    {
-      "source": "/custom-model/langchain",
-      "destination": "/integrations/ai-engines/langchain"
-    },
-    {
       "source": "/custom-model/byom",
       "destination": "/integrations/ai-engines/byom"
-    },
-    {
-      "source": "/custom-model/ray-serve",
-      "destination": "/integrations/ai-engines/ray-serve"
     },
     {
       "source": "/custom-model/mlflow",
@@ -1304,118 +1288,6 @@
     {
       "source": "/agents/knowledge-bases",
       "destination": "/mindsdb_sql/agents/knowledge-bases"
-    },
-    {
-      "source": "/finetune/openai",
-      "destination": "/use-cases/automated_finetuning/openai"
-    },
-    {
-      "source": "/finetune/classification",
-      "destination": "/use-cases/automated_finetuning/classification"
-    },
-    {
-      "source": "/finetune/regression",
-      "destination": "/use-cases/automated_finetuning/regression"
-    },
-    {
-      "source": "/sql/tutorials/chatbots_agents",
-      "destination": "/use-cases/ai_agents/chatbots_agents"
-    },
-    {
-      "source": "/sql/tutorials/create-chatbot",
-      "destination": "/use-cases/ai_agents/create-chatbot"
-    },
-    {
-      "source": "/sql/tutorials/create-chatbot-kb",
-      "destination": "/use-cases/ai_agents/create-chatbot-kb"
-    },
-    {
-      "source": "/sql/tutorials/recommenders",
-      "destination": "/use-cases/ai-powered_data_retrieval/recommenders"
-    },
-    {
-      "source": "/sql/tutorials/image-generator",
-      "destination": "/use-cases/data_enrichment/image-generator"
-    },
-    {
-      "source": "/nlp/json-from-text",
-      "destination": "/use-cases/data_enrichment/json-from-text"
-    },
-    {
-      "source": "/nlp/text-summarization-inside-mysql-with-openai",
-      "destination": "/use-cases/data_enrichment/text-summarization-inside-mysql-with-openai"
-    },
-    {
-      "source": "/nlp/sentiment-analysis-inside-mysql-with-openai",
-      "destination": "/use-cases/data_enrichment/sentiment-analysis-inside-mysql-with-openai"
-    },
-    {
-      "source": "/nlp/question-answering-inside-mysql-with-openai",
-      "destination": "/use-cases/data_enrichment/question-answering-inside-mysql-with-openai"
-    },
-    {
-      "source": "/sql/tutorials/text-sentiment-hf",
-      "destination": "/use-cases/data_enrichment/text-sentiment-hf"
-    },
-    {
-      "source": "/sql/tutorials/hugging-face-examples",
-      "destination": "/use-cases/data_enrichment/hugging-face-examples"
-    },
-    {
-      "source": "/sql/tutorials/hugging-face-inference-api-examples",
-      "destination": "/use-cases/data_enrichment/hugging-face-inference-api-examples"
-    },
-    {
-      "source": "/sql/tutorials/house-sales-forecasting",
-      "destination": "/use-cases/predictive_analytics/house-sales-forecasting"
-    },
-    {
-      "source": "/sql/tutorials/eeg-forecasting",
-      "destination": "/use-cases/predictive_analytics/eeg-forecasting"
-    },
-    {
-      "source": "/sql/tutorials/customer-churn",
-      "destination": "/use-cases/in-database_ml/customer-churn"
-    },
-    {
-      "source": "/sql/tutorials/home-rentals",
-      "destination": "/use-cases/in-database_ml/home-rentals"
-    },
-    {
-      "source": "/sql/tutorials/slack-chatbot",
-      "destination": "/use-cases/ai_workflow_automation/slack-chatbot"
-    },
-    {
-      "source": "/sql/tutorials/twitter-chatbot",
-      "destination": "/use-cases/ai_workflow_automation/twitter-chatbot"
-    },
-    {
-      "source": "/sql/tutorials/twilio-chatbot",
-      "destination": "/use-cases/ai_workflow_automation/twilio-chatbot"
-    },
-    {
-      "source": "/sql/tutorials/customer-reviews-notifications",
-      "destination": "/use-cases/ai_workflow_automation/customer-reviews-notifications"
-    },
-    {
-      "source": "/sql/tutorials/real-time-trading-forecasts",
-      "destination": "/use-cases/ai_workflow_automation/real-time-trading-forecasts"
-    },
-    {
-      "source": "/model-management",
-      "destination": "/features/model-management"
-    },
-    {
-      "source": "/ai-integrations",
-      "destination": "/features/ai-integrations"
-    },
-    {
-      "source": "/data-integrations",
-      "destination": "/features/data-integrations"
-    },
-    {
-      "source": "/automation",
-      "destination": "/features/automation"
     },
     {
       "source": "/features/ai-integrations",
