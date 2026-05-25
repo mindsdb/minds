@@ -100,6 +100,7 @@
                       "integrations/app-integrations/plaid",
                       "integrations/app-integrations/pypi",
                       "integrations/app-integrations/reddit",
+                      "integrations/app-integrations/rest-api",
                       "integrations/app-integrations/salesforce",
                       "integrations/app-integrations/sendinblue",
                       "integrations/app-integrations/shopify",
@@ -153,6 +154,7 @@
                       "integrations/data-integrations/microsoft-access",
                       "integrations/data-integrations/microsoft-sql-server",
                       "integrations/data-integrations/monetdb",
+                      "integrations/data-integrations/mongodb",
                       "integrations/data-integrations/mysql",
                       "integrations/data-integrations/oceanbase",
                       "integrations/data-integrations/opengauss",
@@ -1288,10 +1290,6 @@
     {
       "source": "/agents/knowledge-bases",
       "destination": "/mindsdb_sql/agents/knowledge-bases"
-    },
-    {
-      "source": "/features/ai-integrations",
-      "destination": "/integrations/ai-overview"
     },
     {
       "source": "/features/data-integrations",
