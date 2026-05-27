@@ -1,5 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <rect width="64" height="64" rx="8" fill="#6B21A8"/>
-  <path d="M16 44L32 20L48 44H16Z" fill="white"/>
-  <text x="32" y="56" text-anchor="middle" font-size="8" fill="white" font-family="sans-serif">Valkey</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" viewBox="0 0 512 512"><path d="m126.1 431.2-91.7-57.4V128.6L258.7 0l218.9 128.8v258L255.2 512 178 463.7V346.2L136.2 320V187l121.2-69.5 118.4 69.7v139.4L282 379.4v-56.1c28.1-10.8 48.3-38.6 48.3-71.5 0-42.3-33.5-76.3-74.3-76.3s-74.3 34-74.3 76.3c0 32.8 20.2 60.6 48.3 71.5v106.3l26.8 16.8 164.4-92.6V161.1L258.3 65.3l-167.5 96v181.3l35.3 22.1zM256 216.7c18.5 0 33.1 15.9 33.1 35.1 0 19.1-14.6 35.1-33.1 35.1s-33.1-15.9-33.1-35.1 14.6-35.1 33.1-35.1" style="fill-rule:evenodd;clip-rule:evenodd;fill:#123678"/></svg>

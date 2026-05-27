@@ -105,6 +105,7 @@ class ValkeyHandler(VectorStoreHandler):
                 addresses=[NodeAddress(host=self._host, port=self._port)],
                 credentials=credentials,
                 database_id=self._db,
+                client_name="mindsdb_valkey_handler",
             )
             self._client = self._run(GlideClient.create(config))
             self.is_connected = True
