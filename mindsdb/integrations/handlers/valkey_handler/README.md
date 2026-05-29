@@ -139,5 +139,5 @@ VALKEY_HOST=localhost VALKEY_PORT=6379 pytest mindsdb/integrations/handlers/valk
 ### Running Valkey for Tests
 
 ```bash
-docker run -d --name valkey-test -p 6379:6379 valkey/valkey-bundle:9.1.0-rc1
+docker run -d --name valkey-test -p 6379:6379 valkey/valkey-bundle:9.1
 ```

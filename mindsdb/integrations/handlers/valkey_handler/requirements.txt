@@ -1,2 +1,2 @@
 valkey-glide>=2.4.0
-numpy
+numpy>=1.21.0,<3

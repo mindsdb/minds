@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import json
 import asyncio
-from typing import List, Optional
+import concurrent.futures
 
 import numpy as np
 import pandas as pd
@@ -51,6 +53,10 @@ ID_FIELD_NAME = "id"
 CONTENT_FIELD_NAME = "content"
 METADATA_FIELD_NAME = "metadata"
 
+# Safety limits for SCAN operations
+_MAX_SCAN_ITERATIONS = 100_000
+_INSERT_BATCH_SIZE = 100
+
 
 class ValkeyHandler(VectorStoreHandler):
     """MindsDB handler for Valkey Vector Store using valkey-glide client."""
@@ -70,9 +76,9 @@ class ValkeyHandler(VectorStoreHandler):
         self._distance_metric = connection_data.get("distance_metric", DEFAULT_DISTANCE_METRIC).upper()
         self._prefix = connection_data.get("prefix", DEFAULT_PREFIX)
 
-        self._client: Optional[GlideClient] = None
+        self._client: GlideClient | None = None
         self.is_connected = False
-        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._loop: asyncio.AbstractEventLoop | None = None
 
     def _get_loop(self) -> asyncio.AbstractEventLoop:
         """Get or create an event loop for running async operations."""
@@ -81,9 +87,20 @@ class ValkeyHandler(VectorStoreHandler):
         return self._loop
 
     def _run(self, coro):
-        """Execute an async coroutine synchronously."""
-        loop = self._get_loop()
-        return loop.run_until_complete(coro)
+        """Execute an async coroutine synchronously.
+
+        If called from within a running event loop (e.g. MindsDB async internals),
+        offloads execution to a dedicated thread to avoid RuntimeError.
+        """
+        try:
+            asyncio.get_running_loop()
+            # Already inside an event loop — run in a separate thread.
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(asyncio.run, coro).result()
+        except RuntimeError:
+            # No running loop — use our own.
+            loop = self._get_loop()
+            return loop.run_until_complete(coro)
 
     def _get_distance_metric(self) -> DistanceMetricType:
         """Map string distance metric to DistanceMetricType enum."""
@@ -111,7 +128,7 @@ class ValkeyHandler(VectorStoreHandler):
             self.is_connected = True
             return self._client
         except Exception as e:
-            logger.error(f"Error connecting to Valkey at {self._host}:{self._port}: {e}")
+            logger.error("Error connecting to Valkey at %s:%s: %s", self._host, self._port, e)
             self.is_connected = False
             raise
 
@@ -121,7 +138,7 @@ class ValkeyHandler(VectorStoreHandler):
             try:
                 self._run(self._client.close())
             except Exception as e:
-                logger.debug(f"Error during Valkey disconnect: {e}")
+                logger.debug("Error during Valkey disconnect: %s", e)
         self._client = None
         self.is_connected = False
         if self._loop is not None and not self._loop.is_closed():
@@ -137,7 +154,7 @@ class ValkeyHandler(VectorStoreHandler):
             self._run(client.ping())
             response.success = True
         except Exception as e:
-            logger.error(f"Error connecting to Valkey: {e}")
+            logger.error("Error connecting to Valkey: %s", e)
             response.error_message = str(e)
         finally:
             if response.success and need_to_close:
@@ -200,6 +217,7 @@ class ValkeyHandler(VectorStoreHandler):
 
         # Clean up hash keys with the table's prefix
         cursor = b"0"
+        iterations = 0
         while True:
             result = self._run(
                 self._client.scan(
@@ -212,7 +230,14 @@ class ValkeyHandler(VectorStoreHandler):
             keys = result[1]
             if keys:
                 self._run(self._client.unlink(keys))
-            if cursor == b"0":
+            iterations += 1
+            if cursor == b"0" or iterations >= _MAX_SCAN_ITERATIONS:
+                if iterations >= _MAX_SCAN_ITERATIONS:
+                    logger.warning(
+                        "drop_table SCAN hit iteration limit (%d) for table %s",
+                        _MAX_SCAN_ITERATIONS,
+                        table_name,
+                    )
                 break
 
     def insert(self, table_name: str, data: pd.DataFrame):
@@ -225,6 +250,7 @@ class ValkeyHandler(VectorStoreHandler):
         self.connect()
 
         async def _batch_insert():
+            tasks = []
             for _, row in data.iterrows():
                 doc_id = str(row[TableField.ID.value])
                 key = f"{self._prefix}{table_name}:{doc_id}"
@@ -252,20 +278,32 @@ class ValkeyHandler(VectorStoreHandler):
                 else:
                     field_map[METADATA_FIELD_NAME] = "{}"
 
-                try:
-                    await self._client.hset(key, field_map)
-                except Exception as e:
-                    logger.error(f"Error inserting document {doc_id} into {table_name}: {e}")
+                tasks.append(self._client.hset(key, field_map))
+
+                # Flush in batches to avoid excessive memory usage
+                if len(tasks) >= _INSERT_BATCH_SIZE:
+                    results = await asyncio.gather(*tasks, return_exceptions=True)
+                    for i, result in enumerate(results):
+                        if isinstance(result, Exception):
+                            logger.error("Error inserting document into %s: %s", table_name, result)
+                    tasks = []
+
+            # Flush remaining
+            if tasks:
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                for result in results:
+                    if isinstance(result, Exception):
+                        logger.error("Error inserting document into %s: %s", table_name, result)
 
         self._run(_batch_insert())
 
     def select(
         self,
         table_name: str,
-        columns: List[str] = None,
-        conditions: List[FilterCondition] = None,
-        offset: int = None,
-        limit: int = None,
+        columns: list[str] | None = None,
+        conditions: list[FilterCondition] | None = None,
+        offset: int | None = None,
+        limit: int | None = None,
     ) -> pd.DataFrame:
         """Select documents from the vector store.
 
@@ -283,8 +321,8 @@ class ValkeyHandler(VectorStoreHandler):
 
         # Separate conditions by type
         search_vector = None
-        id_filters: List[FilterCondition] = []
-        metadata_filters: List[FilterCondition] = []
+        id_filters: list[FilterCondition] = []
+        metadata_filters: list[FilterCondition] = []
 
         if conditions:
             for cond in conditions:
@@ -315,10 +353,7 @@ class ValkeyHandler(VectorStoreHandler):
         if id_filters and not metadata_filters:
             # Check if any filter uses NOT_EQUAL or NOT_IN — these cannot be
             # resolved via direct hash lookup and need the FT.SEARCH path.
-            has_negation = any(
-                cond.op in (FilterOperator.NOT_EQUAL, FilterOperator.NOT_IN)
-                for cond in id_filters
-            )
+            has_negation = any(cond.op in (FilterOperator.NOT_EQUAL, FilterOperator.NOT_IN) for cond in id_filters)
             if not has_negation:
                 docs = []
                 for cond in id_filters:
@@ -357,7 +392,7 @@ class ValkeyHandler(VectorStoreHandler):
         result = self._run(ft.search(self._client, table_name, filter_expr, options))
         return self._parse_search_result(result, columns, include_score=False)
 
-    def delete(self, table_name: str, conditions: List[FilterCondition] = None):
+    def delete(self, table_name: str, conditions: list[FilterCondition] | None = None):
         """Delete documents from the vector store.
 
         Args:
@@ -369,7 +404,7 @@ class ValkeyHandler(VectorStoreHandler):
         if not conditions:
             raise Exception("Delete requires at least one condition")
 
-        ids_to_delete: List[str] = []
+        ids_to_delete: list[str] = []
 
         for cond in conditions:
             if cond.column == TableField.ID.value:
@@ -437,9 +472,9 @@ class ValkeyHandler(VectorStoreHandler):
     def _scan_all_docs(
         self,
         table_name: str,
-        columns: Optional[List[str]],
-        offset: Optional[int],
-        limit: Optional[int],
+        columns: list[str] | None,
+        offset: int | None,
+        limit: int | None,
     ) -> pd.DataFrame:
         """Scan all documents for a table using SCAN + HGETALL.
 
@@ -461,15 +496,21 @@ class ValkeyHandler(VectorStoreHandler):
             DataFrame with document data.
         """
         prefix = f"{self._prefix}{table_name}:"
-        all_keys: List[str] = []
+        all_keys: list[str] = []
         cursor = b"0"
+        target_count = (offset or 0) + (limit or 100)
+        iterations = 0
         while True:
             result = self._run(self._client.scan(cursor, match=f"{prefix}*", count=1000))
             cursor = result[0]
             keys = result[1]
             if keys:
                 all_keys.extend(k.decode() if isinstance(k, bytes) else k for k in keys)
-            if cursor == b"0":
+            iterations += 1
+            # Stop early once we have enough keys or hit safety limit
+            if len(all_keys) >= target_count:
+                break
+            if cursor == b"0" or iterations >= _MAX_SCAN_ITERATIONS:
                 break
 
         # Apply offset and limit
@@ -489,7 +530,7 @@ class ValkeyHandler(VectorStoreHandler):
             df = df[available]
         return df
 
-    def _parse_search_result(self, result, columns: Optional[List[str]], include_score: bool) -> pd.DataFrame:
+    def _parse_search_result(self, result, columns: list[str] | None, include_score: bool) -> pd.DataFrame:
         """Parse ft.search result into a DataFrame.
 
         Args:
@@ -565,8 +606,8 @@ class ValkeyHandler(VectorStoreHandler):
 
     def _build_filter_expression(
         self,
-        id_filters: List[FilterCondition],
-        metadata_filters: List[FilterCondition],
+        id_filters: list[FilterCondition],
+        metadata_filters: list[FilterCondition],
     ) -> str:
         """Build Valkey Search query filter string from FilterCondition objects.
 
@@ -597,19 +638,38 @@ class ValkeyHandler(VectorStoreHandler):
             # sub-keys. We support basic substring matching for simple cases,
             # but this is a best-effort approach with known limitations.
             # For precise metadata filtering, consider using dedicated fields.
-            field_name = cond.column.split(".", 1)[-1]
             if cond.op == FilterOperator.EQUAL:
-                # Search for the value as a phrase within the metadata text field.
-                # This matches documents whose metadata JSON contains the value string.
-                escaped_value = str(cond.value).replace('"', '\\"')
+                escaped_value = self._escape_phrase(str(cond.value))
                 parts.append(f'@{METADATA_FIELD_NAME}:("{escaped_value}")')
             elif cond.op == FilterOperator.NOT_EQUAL:
-                escaped_value = str(cond.value).replace('"', '\\"')
+                escaped_value = self._escape_phrase(str(cond.value))
                 parts.append(f'-@{METADATA_FIELD_NAME}:("{escaped_value}")')
 
         if not parts:
             return "*"
         return " ".join(parts)
+
+    def _escape_phrase(self, value: str) -> str:
+        """Escape special characters for FT.SEARCH phrase queries in TextField.
+
+        All characters that have special meaning in FT.SEARCH query syntax
+        are escaped with a backslash to prevent query injection.
+
+        Args:
+            value: Raw string value.
+
+        Returns:
+            Escaped string safe for use inside double-quoted phrase queries.
+        """
+        # Characters with special meaning in FT.SEARCH query syntax
+        special = r',.<>{}[]"\';:!@#$%^&*()-+=~/|~ '
+        result = []
+        for ch in value:
+            if ch in special:
+                result.append(f"\\{ch}")
+            else:
+                result.append(ch)
+        return "".join(result)
 
     def _escape_tag(self, value: str) -> str:
         """Escape special characters for Valkey Search TAG field queries.
@@ -620,11 +680,12 @@ class ValkeyHandler(VectorStoreHandler):
         Returns:
             Escaped string safe for use in TAG filter expressions.
         """
-        special = r',.<>{}[]"\';:!@#$%^&*()-+=~/ '
-        result = ""
+        # | is the TAG union operator and must be escaped
+        special = r',.<>{}[]"\';:!@#$%^&*()-+=~/| '
+        result = []
         for ch in str(value):
             if ch in special:
-                result += f"\\{ch}"
+                result.append(f"\\{ch}")
             else:
-                result += ch
-        return result
+                result.append(ch)
+        return "".join(result)

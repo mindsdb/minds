@@ -7,6 +7,8 @@ Integration tests: Require a running Valkey instance with Search module.
     - Tests skip gracefully if Valkey is unavailable.
 """
 
+from __future__ import annotations
+
 import os
 import struct
 import time
@@ -34,6 +36,31 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 )
 
 from glide import RequestError
+
+
+def _wait_for_indexing(handler, table_name: str, expected_count: int, timeout: float = 5.0):
+    """Poll FT.INFO until the index reports the expected number of documents.
+
+    Falls back to a short sleep if FT.INFO is unavailable or returns
+    unexpected data.
+    """
+    from glide import ft as _ft
+
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            info = handler._run(_ft.info(handler._client, table_name))
+            # info is a mapping; num_docs may be bytes or str
+            num_docs = info.get(b"num_docs") or info.get("num_docs")
+            if num_docs is not None:
+                count = int(num_docs.decode() if isinstance(num_docs, bytes) else num_docs)
+                if count >= expected_count:
+                    return
+        except Exception:
+            pass
+        time.sleep(0.1)
+    # Final fallback — give indexing a moment
+    time.sleep(0.3)
 
 
 # =============================================================================
@@ -314,12 +341,12 @@ class TestValkeyHandlerUnit:
         assert '-@metadata:("web")' in expr
 
     def test_build_filter_expression_metadata_escapes_quotes(self):
-        """Metadata filter properly escapes double quotes in values."""
+        """Metadata filter properly escapes special characters in values."""
         h = self._make_handler()
         cond = FilterCondition("metadata.desc", FilterOperator.EQUAL, 'say "hello"')
         expr = h._build_filter_expression([], [cond])
         assert '\\"hello\\"' in expr
-        assert '@metadata:(' in expr
+        assert "@metadata:(" in expr
 
     @patch("mindsdb.integrations.handlers.valkey_handler.valkey_handler.ft")
     def test_select_id_not_equal_falls_through_to_search(self, mock_ft):
@@ -337,7 +364,7 @@ class TestValkeyHandlerUnit:
         mock_ft.search = mock_search
 
         cond = FilterCondition("id", FilterOperator.NOT_EQUAL, "doc1")
-        result = h.select("t", columns=["id"], conditions=[cond])
+        h.select("t", columns=["id"], conditions=[cond])
 
         # Should have called ft.search with negation filter, not returned empty
         assert "query" in search_called
@@ -359,7 +386,7 @@ class TestValkeyHandlerUnit:
         mock_ft.search = mock_search
 
         cond = FilterCondition("id", FilterOperator.NOT_IN, ["doc1", "doc2"])
-        result = h.select("t", columns=["id"], conditions=[cond])
+        h.select("t", columns=["id"], conditions=[cond])
 
         assert "query" in search_called
         assert "-@id:{doc1|doc2}" in search_called["query"]
@@ -371,7 +398,9 @@ class TestValkeyHandlerUnit:
             with pytest.raises(Exception):
                 h.connect()
             mock_logger.error.assert_called_once()
-            assert "nonexistent.invalid" in mock_logger.error.call_args[0][0]
+            # Lazy formatting: args are (format_str, host, port, exception)
+            call_args = mock_logger.error.call_args[0]
+            assert "nonexistent.invalid" in str(call_args)
 
     def test_disconnect_logs_debug_on_error(self):
         """disconnect logs at debug level when close raises."""
@@ -387,7 +416,8 @@ class TestValkeyHandlerUnit:
         with patch("mindsdb.integrations.handlers.valkey_handler.valkey_handler.logger") as mock_logger:
             h.disconnect()
             mock_logger.debug.assert_called_once()
-            assert "close failed" in mock_logger.debug.call_args[0][0]
+            call_args = mock_logger.debug.call_args[0]
+            assert "close failed" in str(call_args)
 
         assert h.is_connected is False
         assert h._client is None
@@ -608,7 +638,7 @@ class TestValkeyHandlerIntegration:
             )
             handler.insert(unique_table, df)
             # Allow indexing time
-            time.sleep(0.5)
+            _wait_for_indexing(handler, unique_table, 3)
 
             result = handler.select(unique_table, columns=["id", "content"])
             assert len(result) == 3
@@ -633,7 +663,7 @@ class TestValkeyHandlerIntegration:
                 }
             )
             handler.insert(unique_table, df)
-            time.sleep(0.5)
+            _wait_for_indexing(handler, unique_table, 3)
 
             result = handler.select(
                 unique_table,
@@ -668,7 +698,7 @@ class TestValkeyHandlerIntegration:
                 }
             )
             handler.insert(unique_table, df)
-            time.sleep(0.5)
+            _wait_for_indexing(handler, unique_table, 2)
 
             result = handler.select(
                 unique_table,
@@ -698,7 +728,7 @@ class TestValkeyHandlerIntegration:
                 }
             )
             handler.insert(unique_table, df)
-            time.sleep(0.5)
+            _wait_for_indexing(handler, unique_table, 3)
 
             result = handler.select(
                 unique_table,
@@ -723,7 +753,7 @@ class TestValkeyHandlerIntegration:
                 }
             )
             handler.insert(unique_table, df)
-            time.sleep(0.5)
+            _wait_for_indexing(handler, unique_table, 5)
 
             result = handler.select(
                 unique_table,
@@ -752,13 +782,14 @@ class TestValkeyHandlerIntegration:
                 }
             )
             handler.insert(unique_table, df)
-            time.sleep(0.5)
+            _wait_for_indexing(handler, unique_table, 3)
 
             handler.delete(
                 unique_table,
                 [FilterCondition("id", FilterOperator.EQUAL, "doc2")],
             )
-            time.sleep(0.3)
+            # Deletion is synchronous (UNLINK), brief pause for index update
+            time.sleep(0.2)
 
             result = handler.select(unique_table, columns=["id"])
             assert "doc2" not in result["id"].tolist()
@@ -783,13 +814,14 @@ class TestValkeyHandlerIntegration:
                 }
             )
             handler.insert(unique_table, df)
-            time.sleep(0.5)
+            _wait_for_indexing(handler, unique_table, 3)
 
             handler.delete(
                 unique_table,
                 [FilterCondition("id", FilterOperator.IN, ["doc1", "doc3"])],
             )
-            time.sleep(0.3)
+            # Deletion is synchronous (UNLINK), brief pause for index update
+            time.sleep(0.2)
 
             result = handler.select(unique_table, columns=["id"])
             assert set(result["id"].tolist()) == {"doc2"}
@@ -836,7 +868,7 @@ class TestValkeyHandlerIntegration:
                 }
             )
             handler.insert(unique_table, df1)
-            time.sleep(0.3)
+            _wait_for_indexing(handler, unique_table, 1)
 
             df2 = pd.DataFrame(
                 {
@@ -847,7 +879,7 @@ class TestValkeyHandlerIntegration:
                 }
             )
             handler.insert(unique_table, df2)
-            time.sleep(0.3)
+            _wait_for_indexing(handler, unique_table, 1)
 
             result = handler.select(
                 unique_table,
@@ -893,7 +925,7 @@ class TestValkeyHandlerIntegration:
                 }
             )
             h.insert(unique_table, df)
-            time.sleep(0.5)
+            _wait_for_indexing(h, unique_table, 1)
 
             result = h.select(
                 unique_table,
