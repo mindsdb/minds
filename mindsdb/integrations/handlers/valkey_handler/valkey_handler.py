@@ -86,6 +86,7 @@ class ValkeyHandler(VectorStoreHandler):
         self._client: GlideClient | None = None
         self.is_connected = False
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._executor: concurrent.futures.ThreadPoolExecutor | None = None
 
     def _get_loop(self) -> asyncio.AbstractEventLoop:
         """Get or create an event loop for running async operations."""
@@ -102,8 +103,9 @@ class ValkeyHandler(VectorStoreHandler):
         try:
             asyncio.get_running_loop()
             # Already inside an event loop — run in a separate thread.
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                return pool.submit(asyncio.run, coro).result()
+            if self._executor is None:
+                self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+            return self._executor.submit(asyncio.run, coro).result()
         except RuntimeError:
             # No running loop — use our own.
             loop = self._get_loop()
@@ -150,6 +152,9 @@ class ValkeyHandler(VectorStoreHandler):
                 logger.debug("Error during Valkey disconnect: %s", e)
         self._client = None
         self.is_connected = False
+        if self._executor is not None:
+            self._executor.shutdown(wait=False)
+            self._executor = None
         if self._loop is not None and not self._loop.is_closed():
             self._loop.close()
             self._loop = None
@@ -164,7 +169,7 @@ class ValkeyHandler(VectorStoreHandler):
             response.success = True
         except Exception as e:
             logger.error("Error connecting to Valkey: %s", e)
-            response.error_message = str(e)
+            response.error_message = f"Failed to connect to Valkey at {self._host}:{self._port}"
         finally:
             if response.success and need_to_close:
                 self.disconnect()
@@ -386,19 +391,21 @@ class ValkeyHandler(VectorStoreHandler):
             # resolved via direct hash lookup and need the FT.SEARCH path.
             has_negation = any(cond.op in (FilterOperator.NOT_EQUAL, FilterOperator.NOT_IN) for cond in id_filters)
             if not has_negation:
-                docs = []
+                all_ids: list[str] = []
                 for cond in id_filters:
                     if cond.op == FilterOperator.EQUAL:
-                        ids = [cond.value]
+                        all_ids.append(str(cond.value))
                     elif cond.op == FilterOperator.IN:
-                        ids = cond.value
-                    else:
-                        ids = []
-                    for doc_id in ids:
-                        key = f"{self._prefix}{table_name}:{doc_id}"
-                        fields = self._run(self._client.hgetall(key))
-                        if fields:
-                            docs.append(fields)
+                        all_ids.extend(str(v) for v in cond.value)
+
+                # Batch HGETALL calls to avoid N+1 sequential round-trips
+                keys = [f"{self._prefix}{table_name}:{doc_id}" for doc_id in all_ids]
+
+                async def _batch_hgetall():
+                    return await asyncio.gather(*[self._client.hgetall(k) for k in keys])
+
+                results = self._run(_batch_hgetall())
+                docs = [r for r in results if r]
 
                 rows = [self._parse_doc_fields(f, include_score=False) for f in docs]
                 df = pd.DataFrame(rows) if rows else pd.DataFrame(columns=columns or [c["name"] for c in self.SCHEMA])
@@ -448,6 +455,11 @@ class ValkeyHandler(VectorStoreHandler):
                     filter_expr = self._build_filter_expression([cond], [])
                     options = FtSearchOptions(limit=FtSearchLimit(0, _DELETE_SEARCH_LIMIT), dialect=2)
                     result = self._run(ft.search(self._client, table_name, filter_expr, options))
+                    if result[0] > _DELETE_SEARCH_LIMIT:
+                        logger.warning(
+                            "Delete matched %d docs but only removing %d (limit: %d) in table %s",
+                            result[0], _DELETE_SEARCH_LIMIT, _DELETE_SEARCH_LIMIT, table_name,
+                        )
                     if result[0] > 0 and len(result) > 1:
                         for doc_key in result[1].keys():
                             key_str = doc_key.decode() if isinstance(doc_key, bytes) else doc_key
@@ -462,6 +474,11 @@ class ValkeyHandler(VectorStoreHandler):
                 filter_expr = self._build_filter_expression([], [cond])
                 options = FtSearchOptions(limit=FtSearchLimit(0, _DELETE_SEARCH_LIMIT), dialect=2)
                 result = self._run(ft.search(self._client, table_name, filter_expr, options))
+                if result[0] > _DELETE_SEARCH_LIMIT:
+                    logger.warning(
+                        "Delete matched %d docs but only removing %d (limit: %d) in table %s",
+                        result[0], _DELETE_SEARCH_LIMIT, _DELETE_SEARCH_LIMIT, table_name,
+                    )
                 if result[0] > 0 and len(result) > 1:
                     for doc_key in result[1].keys():
                         key_str = doc_key.decode() if isinstance(doc_key, bytes) else doc_key
