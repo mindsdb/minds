@@ -98,14 +98,18 @@ class ValkeyHandler(VectorStoreHandler):
         """Execute an async coroutine synchronously.
 
         If called from within a running event loop (e.g. MindsDB async internals),
-        offloads execution to a dedicated thread to avoid RuntimeError.
+        offloads execution to a dedicated thread with a persistent event loop to
+        avoid RuntimeError and ensure the Glide client always operates on the
+        same loop it was created on.
         """
         try:
             asyncio.get_running_loop()
-            # Already inside an event loop — run in a separate thread.
+            # Already inside an event loop — offload to background thread with
+            # a persistent loop so the Glide client stays on a single loop.
             if self._executor is None:
                 self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-            return self._executor.submit(asyncio.run, coro).result()
+            loop = self._get_loop()
+            return self._executor.submit(loop.run_until_complete, coro).result()
         except RuntimeError:
             # No running loop — use our own.
             loop = self._get_loop()
@@ -293,6 +297,8 @@ class ValkeyHandler(VectorStoreHandler):
                 else:
                     field_map[METADATA_FIELD_NAME] = "{}"
 
+                # Note: hset() coroutines are created eagerly — no code between
+                # here and asyncio.gather should raise, or these become unawaited.
                 tasks.append((doc_id, self._client.hset(key, field_map)))
 
                 # Flush in batches to avoid excessive memory usage
@@ -402,7 +408,11 @@ class ValkeyHandler(VectorStoreHandler):
                 keys = [f"{self._prefix}{table_name}:{doc_id}" for doc_id in all_ids]
 
                 async def _batch_hgetall():
-                    return await asyncio.gather(*[self._client.hgetall(k) for k in keys])
+                    results = []
+                    for i in range(0, len(keys), _INSERT_BATCH_SIZE):
+                        chunk = keys[i:i + _INSERT_BATCH_SIZE]
+                        results.extend(await asyncio.gather(*[self._client.hgetall(k) for k in chunk]))
+                    return results
 
                 results = self._run(_batch_hgetall())
                 docs = [r for r in results if r]
@@ -460,15 +470,7 @@ class ValkeyHandler(VectorStoreHandler):
                             "Delete matched %d docs but only removing %d (limit: %d) in table %s",
                             result[0], _DELETE_SEARCH_LIMIT, _DELETE_SEARCH_LIMIT, table_name,
                         )
-                    if result[0] > 0 and len(result) > 1:
-                        for doc_key in result[1].keys():
-                            key_str = doc_key.decode() if isinstance(doc_key, bytes) else doc_key
-                            prefix_str = f"{self._prefix}{table_name}:"
-                            if key_str.startswith(prefix_str):
-                                doc_id = key_str[len(prefix_str) :]
-                            else:
-                                doc_id = key_str.split(":", 2)[-1]
-                            ids_to_delete.append(doc_id)
+                    ids_to_delete.extend(self._extract_doc_ids_from_search_result(result, table_name))
             elif cond.column.startswith(TableField.METADATA.value):
                 # Search for matching docs to get their IDs
                 filter_expr = self._build_filter_expression([], [cond])
@@ -479,16 +481,7 @@ class ValkeyHandler(VectorStoreHandler):
                         "Delete matched %d docs but only removing %d (limit: %d) in table %s",
                         result[0], _DELETE_SEARCH_LIMIT, _DELETE_SEARCH_LIMIT, table_name,
                     )
-                if result[0] > 0 and len(result) > 1:
-                    for doc_key in result[1].keys():
-                        key_str = doc_key.decode() if isinstance(doc_key, bytes) else doc_key
-                        # Extract doc_id from key: "prefix:table:doc_id"
-                        prefix_str = f"{self._prefix}{table_name}:"
-                        if key_str.startswith(prefix_str):
-                            doc_id = key_str[len(prefix_str) :]
-                        else:
-                            doc_id = key_str.split(":", 2)[-1]
-                        ids_to_delete.append(doc_id)
+                ids_to_delete.extend(self._extract_doc_ids_from_search_result(result, table_name))
 
         if ids_to_delete:
             keys = [f"{self._prefix}{table_name}:{doc_id}" for doc_id in ids_to_delete]
@@ -581,8 +574,15 @@ class ValkeyHandler(VectorStoreHandler):
         selected_keys = all_keys[start:end]
 
         rows = []
-        for key in selected_keys:
-            fields = self._run(self._client.hgetall(key))
+        async def _batch_scan_hgetall():
+            results = []
+            for i in range(0, len(selected_keys), _INSERT_BATCH_SIZE):
+                chunk = selected_keys[i:i + _INSERT_BATCH_SIZE]
+                results.extend(await asyncio.gather(*[self._client.hgetall(k) for k in chunk]))
+            return results
+
+        all_fields = self._run(_batch_scan_hgetall())
+        for fields in all_fields:
             if fields:
                 rows.append(self._parse_doc_fields(fields, include_score=False))
 
@@ -666,6 +666,27 @@ class ValkeyHandler(VectorStoreHandler):
             return val.decode("utf-8", errors="replace")
         return str(val) if val is not None else ""
 
+    def _extract_doc_ids_from_search_result(self, result, table_name: str) -> list[str]:
+        """Extract document IDs from an FT.SEARCH result.
+
+        Args:
+            result: Raw result from ft.search [total_count, {doc_key: {fields}}].
+            table_name: Table name used to strip the key prefix.
+
+        Returns:
+            List of document ID strings.
+        """
+        ids: list[str] = []
+        if result[0] > 0 and len(result) > 1:
+            prefix_str = f"{self._prefix}{table_name}:"
+            for doc_key in result[1].keys():
+                key_str = doc_key.decode() if isinstance(doc_key, bytes) else doc_key
+                if key_str.startswith(prefix_str):
+                    ids.append(key_str[len(prefix_str):])
+                else:
+                    ids.append(key_str.split(":", 2)[-1])
+        return ids
+
     def _build_filter_expression(
         self,
         id_filters: list[FilterCondition],
@@ -724,7 +745,7 @@ class ValkeyHandler(VectorStoreHandler):
             Escaped string safe for use inside double-quoted phrase queries.
         """
         # Characters with special meaning in FT.SEARCH query syntax
-        special = r',.<>{}[]"\';:!@#$%^&*()-+=~/|~ '
+        special = r',.<>{}[]"\';:!@#$%^&*()-+=~/| '
         result = []
         for ch in value:
             if ch in special:
