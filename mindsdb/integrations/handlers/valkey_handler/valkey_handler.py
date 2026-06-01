@@ -55,7 +55,7 @@ METADATA_FIELD_NAME = "metadata"
 
 # Safety limits for SCAN operations
 _MAX_SCAN_ITERATIONS = 100_000
-_INSERT_BATCH_SIZE = 100
+_OP_BATCH_SIZE = 100
 # Maximum documents returned by FT.SEARCH for metadata-based delete
 _DELETE_SEARCH_LIMIT = 10_000
 # Default request timeout in milliseconds (Glide default is 250ms which is
@@ -302,7 +302,7 @@ class ValkeyHandler(VectorStoreHandler):
                 tasks.append((doc_id, self._client.hset(key, field_map)))
 
                 # Flush in batches to avoid excessive memory usage
-                if len(tasks) >= _INSERT_BATCH_SIZE:
+                if len(tasks) >= _OP_BATCH_SIZE:
                     coros = [t[1] for t in tasks]
                     ids = [t[0] for t in tasks]
                     results = await asyncio.gather(*coros, return_exceptions=True)
@@ -409,8 +409,8 @@ class ValkeyHandler(VectorStoreHandler):
 
                 async def _batch_hgetall():
                     results = []
-                    for i in range(0, len(keys), _INSERT_BATCH_SIZE):
-                        chunk = keys[i:i + _INSERT_BATCH_SIZE]
+                    for i in range(0, len(keys), _OP_BATCH_SIZE):
+                        chunk = keys[i:i + _OP_BATCH_SIZE]
                         results.extend(await asyncio.gather(*[self._client.hgetall(k) for k in chunk]))
                     return results
 
@@ -573,11 +573,14 @@ class ValkeyHandler(VectorStoreHandler):
         end = start + (limit or 100)
         selected_keys = all_keys[start:end]
 
+        if not selected_keys:
+            return pd.DataFrame(columns=columns or [c["name"] for c in self.SCHEMA])
+
         rows = []
         async def _batch_scan_hgetall():
             results = []
-            for i in range(0, len(selected_keys), _INSERT_BATCH_SIZE):
-                chunk = selected_keys[i:i + _INSERT_BATCH_SIZE]
+            for i in range(0, len(selected_keys), _OP_BATCH_SIZE):
+                chunk = selected_keys[i:i + _OP_BATCH_SIZE]
                 results.extend(await asyncio.gather(*[self._client.hgetall(k) for k in chunk]))
             return results
 
