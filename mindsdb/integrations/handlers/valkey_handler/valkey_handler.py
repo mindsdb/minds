@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from glide import (
+    Batch,
     GlideClient,
     GlideClientConfiguration,
     NodeAddress,
@@ -21,6 +22,7 @@ from glide import (
     TextField,
     TagField,
     VectorAlgorithm,
+    VectorFieldAttributesFlat,
     VectorFieldAttributesHnsw,
     DistanceMetricType,
     VectorType,
@@ -46,6 +48,7 @@ DEFAULT_PORT = 6379
 DEFAULT_DB = 0
 DEFAULT_VECTOR_DIMENSION = 384
 DEFAULT_DISTANCE_METRIC = "COSINE"
+DEFAULT_INDEX_ALGORITHM = "HNSW"
 DEFAULT_PREFIX = "doc:"
 VECTOR_FIELD_NAME = "embeddings"
 SCORE_FIELD_NAME = f"__{VECTOR_FIELD_NAME}_score"  # "__embeddings_score"
@@ -79,6 +82,7 @@ class ValkeyHandler(VectorStoreHandler):
         self._db = int(connection_data.get("db", DEFAULT_DB))
         self._vector_dimension = int(connection_data.get("vector_dimension", DEFAULT_VECTOR_DIMENSION))
         self._distance_metric = connection_data.get("distance_metric", DEFAULT_DISTANCE_METRIC).upper()
+        self._index_algorithm = connection_data.get("index_algorithm", DEFAULT_INDEX_ALGORITHM).upper()
         self._prefix = connection_data.get("prefix", DEFAULT_PREFIX)
         self._use_tls = bool(connection_data.get("use_tls", False))
         self._request_timeout = int(connection_data.get("request_timeout", _DEFAULT_REQUEST_TIMEOUT_MS))
@@ -195,8 +199,14 @@ class ValkeyHandler(VectorStoreHandler):
             TagField(ID_FIELD_NAME),
             VectorField(
                 VECTOR_FIELD_NAME,
-                VectorAlgorithm.HNSW,
-                VectorFieldAttributesHnsw(
+                VectorAlgorithm.FLAT if self._index_algorithm == "FLAT" else VectorAlgorithm.HNSW,
+                VectorFieldAttributesFlat(
+                    dimensions=self._vector_dimension,
+                    distance_metric=self._get_distance_metric(),
+                    type=VectorType.FLOAT32,
+                )
+                if self._index_algorithm == "FLAT"
+                else VectorFieldAttributesHnsw(
                     dimensions=self._vector_dimension,
                     distance_metric=self._get_distance_metric(),
                     type=VectorType.FLOAT32,
@@ -404,14 +414,19 @@ class ValkeyHandler(VectorStoreHandler):
                     elif cond.op == FilterOperator.IN:
                         all_ids.extend(str(v) for v in cond.value)
 
-                # Batch HGETALL calls to avoid N+1 sequential round-trips
+                # Use GLIDE Batch (pipeline) for batched HGETALL — sends all
+                # commands in a single network round-trip per chunk.
                 keys = [f"{self._prefix}{table_name}:{doc_id}" for doc_id in all_ids]
 
                 async def _batch_hgetall():
                     results = []
                     for i in range(0, len(keys), _OP_BATCH_SIZE):
-                        chunk = keys[i:i + _OP_BATCH_SIZE]
-                        results.extend(await asyncio.gather(*[self._client.hgetall(k) for k in chunk]))
+                        chunk = keys[i : i + _OP_BATCH_SIZE]
+                        batch = Batch(is_atomic=False)
+                        for key in chunk:
+                            batch.hgetall(key)
+                        batch_results = await self._client.exec(batch, raise_on_error=False)
+                        results.extend(batch_results)
                     return results
 
                 results = self._run(_batch_hgetall())
@@ -468,7 +483,10 @@ class ValkeyHandler(VectorStoreHandler):
                     if result[0] > _DELETE_SEARCH_LIMIT:
                         logger.warning(
                             "Delete matched %d docs but only removing %d (limit: %d) in table %s",
-                            result[0], _DELETE_SEARCH_LIMIT, _DELETE_SEARCH_LIMIT, table_name,
+                            result[0],
+                            _DELETE_SEARCH_LIMIT,
+                            _DELETE_SEARCH_LIMIT,
+                            table_name,
                         )
                     ids_to_delete.extend(self._extract_doc_ids_from_search_result(result, table_name))
             elif cond.column.startswith(TableField.METADATA.value):
@@ -479,7 +497,10 @@ class ValkeyHandler(VectorStoreHandler):
                 if result[0] > _DELETE_SEARCH_LIMIT:
                     logger.warning(
                         "Delete matched %d docs but only removing %d (limit: %d) in table %s",
-                        result[0], _DELETE_SEARCH_LIMIT, _DELETE_SEARCH_LIMIT, table_name,
+                        result[0],
+                        _DELETE_SEARCH_LIMIT,
+                        _DELETE_SEARCH_LIMIT,
+                        table_name,
                     )
                 ids_to_delete.extend(self._extract_doc_ids_from_search_result(result, table_name))
 
@@ -577,11 +598,16 @@ class ValkeyHandler(VectorStoreHandler):
             return pd.DataFrame(columns=columns or [c["name"] for c in self.SCHEMA])
 
         rows = []
+
         async def _batch_scan_hgetall():
             results = []
             for i in range(0, len(selected_keys), _OP_BATCH_SIZE):
-                chunk = selected_keys[i:i + _OP_BATCH_SIZE]
-                results.extend(await asyncio.gather(*[self._client.hgetall(k) for k in chunk]))
+                chunk = selected_keys[i : i + _OP_BATCH_SIZE]
+                batch = Batch(is_atomic=False)
+                for key in chunk:
+                    batch.hgetall(key)
+                batch_results = await self._client.exec(batch, raise_on_error=False)
+                results.extend(batch_results)
             return results
 
         all_fields = self._run(_batch_scan_hgetall())
@@ -685,7 +711,7 @@ class ValkeyHandler(VectorStoreHandler):
             for doc_key in result[1].keys():
                 key_str = doc_key.decode() if isinstance(doc_key, bytes) else doc_key
                 if key_str.startswith(prefix_str):
-                    ids.append(key_str[len(prefix_str):])
+                    ids.append(key_str[len(prefix_str) :])
                 else:
                     ids.append(key_str.split(":", 2)[-1])
         return ids

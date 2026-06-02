@@ -525,17 +525,22 @@ class TestValkeyHandlerUnit:
 
         h._client.scan = mock_scan
 
-        # Mock hgetall for each key
-        async def mock_hgetall(key):
-            doc_id = key.split(":")[-1]
-            return {
-                b"id": doc_id.encode(),
-                b"content": b"text",
-                b"embeddings": np.array([0.1, 0.2, 0.3, 0.4], dtype=np.float32).tobytes(),
-                b"metadata": b"{}",
-            }
+        # Mock client.exec to return hgetall results for each key in the batch
+        async def mock_exec(batch, **kwargs):
+            # Return one hgetall result per command added to the batch.
+            # The batch contains hgetall for selected_keys (after offset/limit).
+            # With offset=1, limit=2 from 5 keys, selected_keys = [doc1, doc2]
+            results = []
+            for i in range(1, 3):  # doc1, doc2
+                results.append({
+                    b"id": f"doc{i}".encode(),
+                    b"content": b"text",
+                    b"embeddings": np.array([0.1, 0.2, 0.3, 0.4], dtype=np.float32).tobytes(),
+                    b"metadata": b"{}",
+                })
+            return results
 
-        h._client.hgetall = mock_hgetall
+        h._client.exec = mock_exec
 
         # Request offset=1, limit=2
         df = h._scan_all_docs("t", columns=["id"], offset=1, limit=2)

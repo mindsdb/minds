@@ -34,6 +34,11 @@ connection_args = OrderedDict(
         "description": "Distance metric: COSINE, L2, or IP",
         "required": False,
     },
+    index_algorithm={
+        "type": ARG_TYPE.STR,
+        "description": "Vector index algorithm: HNSW (default) or FLAT",
+        "required": False,
+    },
     prefix={
         "type": ARG_TYPE.STR,
         "description": "Key prefix for document hashes",
