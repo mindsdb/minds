@@ -19,7 +19,7 @@ class MiniMaxHandlerConfig(BaseSettings):
     """
 
     BASE_URL: str = "https://api.minimax.io/v1"
-    DEFAULT_MODEL: str = "MiniMax-M2.7"
+    DEFAULT_MODEL: str = "MiniMax-M3"
     DEFAULT_MODE: str = "default"
     SUPPORTED_MODES: list[str] = [
         'default',

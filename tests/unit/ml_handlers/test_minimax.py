@@ -22,7 +22,7 @@ class TestMiniMaxHandler(unittest.TestCase):
         mock_model_storage.json_get.return_value = {
             "using": {"prompt_template": "test prompt"},
             "target": "answer",
-            "model_name": "MiniMax-M2.7",
+            "model_name": "MiniMax-M3",
             "api_base": minimax_handler_config.BASE_URL,
         }
 
@@ -39,13 +39,18 @@ class TestMiniMaxHandler(unittest.TestCase):
         self.assertEqual(self.handler.api_base, "https://api.minimax.io/v1")
 
     def test_default_model(self):
-        """Test that the default model is MiniMax-M2.7."""
-        self.assertEqual(self.handler.default_model, "MiniMax-M2.7")
+        """Test that the default model is MiniMax-M3."""
+        self.assertEqual(self.handler.default_model, "MiniMax-M3")
 
     def test_supported_models_list(self):
         """Test that MINIMAX_MODELS contains the expected models."""
+        self.assertIn("MiniMax-M3", MINIMAX_MODELS)
         self.assertIn("MiniMax-M2.7", MINIMAX_MODELS)
         self.assertIn("MiniMax-M2.7-highspeed", MINIMAX_MODELS)
+
+    def test_m3_is_first_model(self):
+        """Test that MiniMax-M3 is the first (preferred) model."""
+        self.assertEqual(MINIMAX_MODELS[0], "MiniMax-M3")
 
     def test_is_chat_model_returns_true_for_all_models(self):
         """Test that all MiniMax models are recognized as chat models."""
@@ -58,6 +63,17 @@ class TestMiniMaxHandler(unittest.TestCase):
 
     def test_create_with_valid_model(self):
         """Test that create() succeeds with a valid model name."""
+        args = {
+            "using": {
+                "prompt_template": "Answer the question: {{question}}",
+                "model_name": "MiniMax-M3",
+            }
+        }
+        # Should not raise
+        self.handler.create(target="answer", args=args)
+
+    def test_create_with_m27_model(self):
+        """Test that create() succeeds with MiniMax-M2.7."""
         args = {
             "using": {
                 "prompt_template": "Answer the question: {{question}}",
@@ -89,7 +105,7 @@ class TestMiniMaxHandler(unittest.TestCase):
         with self.assertRaises(Exception) as ctx:
             self.handler.create(target="answer", args=args)
         self.assertIn("Invalid model name", str(ctx.exception))
-        self.assertIn("MiniMax-M2.7", str(ctx.exception))
+        self.assertIn("MiniMax-M3", str(ctx.exception))
 
     def test_create_without_model_uses_default(self):
         """Test that create() uses the default model when no model is specified."""
@@ -100,7 +116,7 @@ class TestMiniMaxHandler(unittest.TestCase):
         }
         self.handler.create(target="answer", args=args)
         saved_args = self.handler.model_storage.json_set.call_args[0][1]
-        self.assertEqual(saved_args["model_name"], "MiniMax-M2.7")
+        self.assertEqual(saved_args["model_name"], "MiniMax-M3")
 
     def test_create_validation_without_using_clause_raises_exception(self):
         """Test that create_validation raises exception without USING clause."""

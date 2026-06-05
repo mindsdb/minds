@@ -31,7 +31,7 @@ CREATE MODEL minimax_model
 PREDICT answer
 USING
       engine = 'minimax_engine',          -- engine name as created via CREATE ML_ENGINE
-      model_name = 'MiniMax-M2.7',        -- choose one of available models
+      model_name = 'MiniMax-M3',          -- choose one of available models
       prompt_template = 'prompt-to-the-model'; -- prompt message to be completed by the model
 ```
 
@@ -39,14 +39,14 @@ USING
 
 The following usage examples utilize `minimax_engine` to create a model with the `CREATE MODEL` statement.
 
-Classify text sentiment using the MiniMax-M2.7 model.
+Classify text sentiment using the MiniMax-M3 model.
 
 ```sql
 CREATE MODEL minimax_model
 PREDICT sentiment
 USING
    engine = 'minimax_engine',
-   model_name = 'MiniMax-M2.7',
+   model_name = 'MiniMax-M3',
    prompt_template = 'Classify the sentiment of the following text as one of `positive`, `neutral` or `negative`: {{text}}. Give sentiment as result only.';
 ```
 
@@ -72,7 +72,8 @@ Here is the output:
 
 | Model | Description |
 |-------|-------------|
-| `MiniMax-M2.7` | Peak Performance. Ultimate Value. Master the Complex. Default model. |
+| `MiniMax-M3` | 512K context, up to 128K output, image input. Default model. |
+| `MiniMax-M2.7` | Peak Performance. Ultimate Value. Master the Complex. |
 | `MiniMax-M2.7-highspeed` | Same performance, faster and more agile. |
 
 For the latest model information, visit the [MiniMax API documentation](https://platform.minimax.io/docs/api-reference/text-openai-api).

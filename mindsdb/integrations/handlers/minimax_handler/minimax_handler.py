@@ -12,6 +12,7 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 MINIMAX_MODELS = [
+    "MiniMax-M3",
     "MiniMax-M2.7",
     "MiniMax-M2.7-highspeed",
 ]
