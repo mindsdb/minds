@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>API Reference — Minds Cowork Docs</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Josefin+Sans:wght@300;400;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:        #080d18;
+    --surface:   #0E1626;
+    --surface-2: #131D31;
+    --surface-3: #1A2640;
+    --line:      #1E2A44;
+    --line-2:    #2A3957;
+    --ink:       #F2F6FF;
+    --ink-2:     #C7D2E5;
+    --ink-3:     #8A97AE;
+    --ink-4:     #5C6B85;
+    --accent:    #22D3EE;
+    --accent-bg: rgba(34,211,238,0.10);
+    --accent-glow: rgba(34,211,238,0.45);
+    --method-get:    #4ADE80;
+    --method-get-bg: rgba(74,222,128,0.10);
+    --method-post:   #60A5FA;
+    --method-post-bg: rgba(96,165,250,0.10);
+    --method-patch:  #FBBF24;
+    --method-patch-bg: rgba(251,191,36,0.10);
+    --method-delete: #F87171;
+    --method-delete-bg: rgba(248,113,113,0.10);
+    --method-put:    #A78BFA;
+    --method-put-bg: rgba(167,139,250,0.10);
+    --r:    6px; --r-lg: 10px; --r-xl: 16px;
+    --font-sans:    'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Josefin Sans', 'Inter', sans-serif;
+    --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { color-scheme: dark; }
+  body { background: var(--bg); color: var(--ink-2); font-family: var(--font-sans); font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { opacity: 0.8; }
+  code { font-family: var(--font-mono); font-size: 0.88em; background: var(--surface-3); border: 1px solid var(--line-2); border-radius: 4px; padding: 1px 6px; color: var(--accent); }
+
+  nav { position: sticky; top: 0; z-index: 40; background: rgba(8,13,24,0.80); backdrop-filter: saturate(160%) blur(16px); -webkit-backdrop-filter: saturate(160%) blur(16px); border-bottom: 1px solid var(--line); }
+  .nav-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; height: 52px; display: flex; align-items: center; gap: 32px; }
+  .brand { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3); display: flex; align-items: center; gap: 8px; }
+  .brand-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+  .nav-links { display: flex; gap: 24px; margin-left: auto; }
+  .nav-links a { font-size: 13px; color: var(--ink-3); transition: color 120ms; }
+  .nav-links a:hover { color: var(--ink); opacity: 1; }
+  .nav-links a.active { color: var(--accent); }
+
+  .shell { max-width: 1100px; margin: 0 auto; padding: 64px 24px 120px; display: grid; grid-template-columns: 220px 1fr; gap: 0; }
+  @media (max-width: 768px) { .shell { grid-template-columns: 1fr; } }
+
+  .sidebar { padding-right: 40px; padding-top: 4px; }
+  @media (max-width: 768px) { .sidebar { display: none; } }
+  .sidebar-label { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 12px; }
+  .sidebar ul { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+  .sidebar li a { font-size: 13px; color: var(--ink-3); display: block; padding: 4px 10px; border-left: 2px solid transparent; border-radius: 0 var(--r) var(--r) 0; transition: color 120ms, border-color 120ms; }
+  .sidebar li a:hover { color: var(--ink); opacity: 1; border-color: var(--line-2); }
+  .sidebar li a.active { color: var(--accent); border-color: var(--accent); }
+
+  .content { min-width: 0; }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .eyebrow::before { content: ''; display: block; width: 24px; height: 1px; background: var(--accent); }
+  h1 { font-family: var(--font-display); font-size: clamp(30px, 4vw, 46px); font-weight: 700; letter-spacing: -0.01em; line-height: 1.08; color: var(--ink); margin-bottom: 16px; }
+  .lede { font-size: 16px; line-height: 1.65; color: var(--ink-3); max-width: 60ch; margin-bottom: 52px; }
+
+  /* ── Base URL strip ── */
+  .base-url {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 14px 18px;
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 48px;
+    font-family: var(--font-mono); font-size: 13px;
+  }
+  .base-url .burl-label {
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-4); white-space: nowrap;
+  }
+  .base-url .burl-val { color: var(--accent); }
+
+  /* ── Section ── */
+  .api-section { margin-bottom: 56px; scroll-margin-top: 80px; }
+  h2 { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+  .section-desc { font-size: 14px; color: var(--ink-3); margin-bottom: 20px; }
+
+  /* ── Endpoint ── */
+  .endpoint {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .endpoint-header {
+    padding: 14px 18px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  .endpoint:hover .endpoint-header { background: var(--surface-2); }
+  .method {
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: var(--r);
+    min-width: 56px; text-align: center;
+  }
+  .method.get    { color: var(--method-get);    background: var(--method-get-bg); }
+  .method.post   { color: var(--method-post);   background: var(--method-post-bg); }
+  .method.patch  { color: var(--method-patch);  background: var(--method-patch-bg); }
+  .method.delete { color: var(--method-delete); background: var(--method-delete-bg); }
+  .method.put    { color: var(--method-put);    background: var(--method-put-bg); }
+  .endpoint-path { font-family: var(--font-mono); font-size: 13.5px; color: var(--ink); }
+  .endpoint-desc { font-size: 13px; color: var(--ink-3); margin-left: auto; }
+  .endpoint-body { padding: 0 18px 18px; border-top: 1px solid var(--line); }
+  .endpoint-body p { font-size: 13.5px; color: var(--ink-3); margin: 14px 0 10px; }
+
+  pre { font-family: var(--font-mono); font-size: 12.5px; line-height: 1.65; color: var(--ink-2); overflow-x: auto; tab-size: 2; }
+  .code-block { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; margin: 10px 0; }
+  .code-header { padding: 8px 14px; border-bottom: 1px solid var(--line); display: flex; align-items: center; }
+  .code-lang { font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-4); }
+  .code-block pre { padding: 14px 16px; }
+  .hl { color: var(--accent); }
+  .cm { color: var(--ink-4); }
+  .st { color: #A5F3FC; }
+
+  footer { border-top: 1px solid var(--line); padding: 24px; text-align: center; font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); letter-spacing: 0.06em; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <div class="brand"><div class="brand-dot"></div>Minds Cowork</div>
+    <div class="nav-links">
+      <a href="index.html">Docs</a>
+      <a href="setup.html">Setup</a>
+      <a href="api.html" class="active">API</a>
+      <a href="use-cases.html">Use Cases</a>
+      <a href="https://github.com/mindsdb/minds-platform">GitHub ↗</a>
+    </div>
+  </div>
+</nav>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="sidebar-label">Endpoints</div>
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#responses">Responses</a></li>
+      <li><a href="#conversations">Conversations</a></li>
+      <li><a href="#projects">Projects</a></li>
+      <li><a href="#artifacts">Artifacts</a></li>
+      <li><a href="#schedules">Schedules</a></li>
+      <li><a href="#files">Files</a></li>
+      <li><a href="#connectors">Connectors</a></li>
+      <li><a href="#search">Search</a></li>
+    </ul>
+  </aside>
+
+  <main class="content">
+    <div class="eyebrow">API Reference</div>
+    <h1>REST API</h1>
+    <p class="lede">
+      The Cowork server exposes a versioned REST API at <code>/api/v1</code>.
+      All endpoints return JSON. The interactive docs are available at
+      <a href="http://localhost:26866/docs">/docs</a> when the server is running.
+    </p>
+
+    <div class="base-url" id="overview">
+      <span class="burl-label">Base URL</span>
+      <span class="burl-val">http://localhost:26866/api/v1</span>
+    </div>
+
+    <!-- Responses -->
+    <div class="api-section" id="responses">
+      <h2>Responses</h2>
+      <p class="section-desc">Stream AI responses from the agent. Compatible with the OpenAI Responses API shape.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/responses</span>
+          <span class="endpoint-desc">Create a streaming response</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Sends a message and streams back the agent's response as server-sent events.</p>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">curl</span></div>
+            <pre><span class="hl">curl</span> -X POST http://localhost:26866/api/v1/responses \
+  -H <span class="st">"Content-Type: application/json"</span> \
+  -d <span class="st">'{"conversation_id": "...", "input": "Summarise last week'\''s sales data"}'</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/responses/in-flight-list</span>
+          <span class="endpoint-desc">List active streams</span>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/responses/in-flight</span>
+          <span class="endpoint-desc">Check a specific stream</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Conversations -->
+    <div class="api-section" id="conversations">
+      <h2>Conversations</h2>
+      <p class="section-desc">Manage conversation threads. Each conversation holds an ordered list of messages.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/conversations</span>
+          <span class="endpoint-desc">List conversations</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/conversations</span>
+          <span class="endpoint-desc">Create a conversation</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">curl</span></div>
+            <pre><span class="hl">curl</span> -X POST http://localhost:26866/api/v1/conversations \
+  -H <span class="st">"Content-Type: application/json"</span> \
+  -d <span class="st">'{"project_id": "...", "title": "Q2 analysis"}'</span></pre>
+          </div>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/conversations/{id}</span>
+          <span class="endpoint-desc">Get a conversation</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method patch">PATCH</span>
+          <span class="endpoint-path">/conversations/{id}</span>
+          <span class="endpoint-desc">Update title or metadata</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/conversations/{id}/items</span>
+          <span class="endpoint-desc">Get messages in a conversation</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method delete">DELETE</span>
+          <span class="endpoint-path">/conversations/{id}</span>
+          <span class="endpoint-desc">Delete a conversation</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Projects -->
+    <div class="api-section" id="projects">
+      <h2>Projects</h2>
+      <p class="section-desc">Projects are workspaces that group conversations, files, and artifacts.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/projects</span>
+          <span class="endpoint-desc">List all projects</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/projects</span>
+          <span class="endpoint-desc">Create a project</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">curl</span></div>
+            <pre><span class="hl">curl</span> -X POST http://localhost:26866/api/v1/projects \
+  -H <span class="st">"Content-Type: application/json"</span> \
+  -d <span class="st">'{"name": "Sales Automation", "description": "Weekly reporting flows"}'</span></pre>
+          </div>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method patch">PATCH</span>
+          <span class="endpoint-path">/projects/{id}</span>
+          <span class="endpoint-desc">Update a project</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method delete">DELETE</span>
+          <span class="endpoint-path">/projects/{id}</span>
+          <span class="endpoint-desc">Delete a project</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Artifacts -->
+    <div class="api-section" id="artifacts">
+      <h2>Artifacts</h2>
+      <p class="section-desc">Artifacts are the outputs the agent creates — apps, reports, dashboards, documents. Each artifact belongs to a project.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/artifacts</span>
+          <span class="endpoint-desc">List artifacts (optionally filter by project)</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/artifacts/preview</span>
+          <span class="endpoint-desc">Preview an artifact by path</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/artifacts/open</span>
+          <span class="endpoint-desc">Open an artifact in the desktop shell</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/artifacts/serve/{project}/{path}</span>
+          <span class="endpoint-desc">Serve an artifact file</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Schedules -->
+    <div class="api-section" id="schedules">
+      <h2>Schedules</h2>
+      <p class="section-desc">Run tasks on a cron schedule. Schedules belong to a project and trigger a conversation or workflow automatically.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/schedules</span>
+          <span class="endpoint-desc">List schedules</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/schedules</span>
+          <span class="endpoint-desc">Create a schedule</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">curl</span></div>
+            <pre><span class="hl">curl</span> -X POST http://localhost:26866/api/v1/schedules \
+  -H <span class="st">"Content-Type: application/json"</span> \
+  -d <span class="st">'{"project_id": "...", "cron": "0 9 * * 1", "prompt": "Generate weekly sales digest"}'</span></pre>
+          </div>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method patch">PATCH</span>
+          <span class="endpoint-path">/schedules/{id}</span>
+          <span class="endpoint-desc">Update a schedule</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/schedules/{id}/pause</span>
+          <span class="endpoint-desc">Pause a schedule</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method delete">DELETE</span>
+          <span class="endpoint-path">/schedules/{id}</span>
+          <span class="endpoint-desc">Delete a schedule</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Files -->
+    <div class="api-section" id="files">
+      <h2>Files</h2>
+      <p class="section-desc">Upload and manage files that the agent can read, search, and reference during conversations.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/files</span>
+          <span class="endpoint-desc">List uploaded files</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/files</span>
+          <span class="endpoint-desc">Upload a file</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method delete">DELETE</span>
+          <span class="endpoint-path">/files/{id}</span>
+          <span class="endpoint-desc">Delete a file</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Connectors -->
+    <div class="api-section" id="connectors">
+      <h2>Connectors</h2>
+      <p class="section-desc">Integrate external data sources. Connectors are defined by specs and instantiated as connections with encrypted credentials.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/connectors/specs</span>
+          <span class="endpoint-desc">List available connector specs</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/connectors/connections</span>
+          <span class="endpoint-desc">List active connections</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/connectors/connections</span>
+          <span class="endpoint-desc">Create a connection</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/connectors/oauth/{spec}/start</span>
+          <span class="endpoint-desc">Start OAuth flow for a connector</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="api-section" id="search">
+      <h2>Search</h2>
+      <p class="section-desc">Full-text and semantic search across conversations, files, and memory.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/search</span>
+          <span class="endpoint-desc">Search across the workspace</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">curl</span></div>
+            <pre><span class="hl">curl</span> <span class="st">"http://localhost:26866/api/v1/search?q=sales+forecast&project_id=..."</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<footer>
+  Minds Platform · Open Source · <a href="https://github.com/mindsdb/minds-platform">github.com/mindsdb/minds-platform</a>
+</footer>
+
+</body>
+</html>

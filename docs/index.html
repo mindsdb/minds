@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Minds Cowork — Docs</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Josefin+Sans:wght@300;400;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:        #080d18;
+    --surface:   #0E1626;
+    --surface-2: #131D31;
+    --surface-3: #1A2640;
+    --line:      #1E2A44;
+    --line-2:    #2A3957;
+    --ink:       #F2F6FF;
+    --ink-2:     #C7D2E5;
+    --ink-3:     #8A97AE;
+    --ink-4:     #5C6B85;
+    --accent:    #22D3EE;
+    --accent-bg: rgba(34,211,238,0.10);
+    --accent-glow: rgba(34,211,238,0.45);
+    --r:    6px;
+    --r-lg: 10px;
+    --r-xl: 16px;
+    --font-sans:    'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Josefin Sans', 'Inter', sans-serif;
+    --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { color-scheme: dark; }
+  body {
+    background: var(--bg);
+    color: var(--ink-2);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { opacity: 0.8; }
+
+  /* ── Nav ── */
+  nav {
+    position: sticky; top: 0; z-index: 40;
+    background: rgba(8,13,24,0.80);
+    backdrop-filter: saturate(160%) blur(16px);
+    -webkit-backdrop-filter: saturate(160%) blur(16px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-inner {
+    max-width: 1100px; margin: 0 auto;
+    padding: 0 24px;
+    height: 52px;
+    display: flex; align-items: center; gap: 32px;
+  }
+  .brand {
+    font-family: var(--font-mono);
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-3);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .brand-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+  .nav-links { display: flex; gap: 24px; margin-left: auto; }
+  .nav-links a {
+    font-size: 13px; color: var(--ink-3);
+    transition: color 120ms;
+  }
+  .nav-links a:hover { color: var(--ink); opacity: 1; }
+  .nav-links a.active { color: var(--accent); }
+
+  /* ── Hero ── */
+  .hero-wrap {
+    max-width: 1100px; margin: 0 auto;
+    padding: 88px 24px 64px;
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .eyebrow::before {
+    content: '';
+    display: block; width: 24px; height: 1px;
+    background: var(--accent);
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(36px, 5vw, 58px);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.06;
+    color: var(--ink);
+    margin-bottom: 20px;
+  }
+  h1 span { color: var(--accent); }
+  .lede {
+    font-size: 17px; line-height: 1.65;
+    color: var(--ink-3); max-width: 58ch;
+    margin-bottom: 48px;
+  }
+
+  /* ── Doc cards ── */
+  .cards {
+    display: grid; gap: 16px;
+    grid-template-columns: 1fr;
+    max-width: 960px;
+    margin-bottom: 72px;
+  }
+  @media (min-width: 640px) { .cards { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 900px) { .cards { grid-template-columns: repeat(3, 1fr); } }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    padding: 28px 26px 24px;
+    display: flex; flex-direction: column; gap: 10px;
+    transition: border-color 160ms, transform 160ms, box-shadow 160ms;
+    cursor: default;
+  }
+  .card:hover {
+    border-color: rgba(34,211,238,0.30);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.5), 0 0 0 1px rgba(34,211,238,0.08);
+  }
+  .card-icon {
+    width: 36px; height: 36px; border-radius: var(--r-lg);
+    background: var(--accent-bg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; margin-bottom: 4px;
+  }
+  .card-tag {
+    font-family: var(--font-mono);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent);
+  }
+  .card h3 {
+    font-size: 18px; font-weight: 600;
+    letter-spacing: -0.01em; color: var(--ink);
+  }
+  .card p {
+    font-size: 13.5px; line-height: 1.6; color: var(--ink-3);
+    flex: 1;
+  }
+  .card a.card-link {
+    font-size: 12.5px; font-weight: 500;
+    color: var(--accent);
+    display: flex; align-items: center; gap: 5px;
+    margin-top: 6px;
+  }
+  .card a.card-link:hover { opacity: 0.75; }
+
+  /* ── Architecture strip ── */
+  .arch-section {
+    max-width: 1100px; margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-4); margin-bottom: 24px;
+  }
+  .arch-grid {
+    display: grid; gap: 12px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 640px) { .arch-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .arch-pill {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .arch-pill .pill-name {
+    font-family: var(--font-mono);
+    font-size: 11.5px; font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+  }
+  .arch-pill .pill-desc {
+    font-size: 13px; color: var(--ink-3); line-height: 1.5;
+  }
+  .arch-pill .pill-repo {
+    font-family: var(--font-mono);
+    font-size: 10.5px; color: var(--ink-4); margin-top: 2px;
+  }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 24px;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 11px; color: var(--ink-4);
+    letter-spacing: 0.06em;
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      Minds Cowork
+    </div>
+    <div class="nav-links">
+      <a href="index.html" class="active">Docs</a>
+      <a href="setup.html">Setup</a>
+      <a href="api.html">API</a>
+      <a href="use-cases.html">Use Cases</a>
+      <a href="https://github.com/mindsdb/minds-platform">GitHub ↗</a>
+    </div>
+  </div>
+</nav>
+
+<div class="hero-wrap">
+  <div class="eyebrow">Documentation</div>
+  <h1>Build and automate<br>with <span>Minds Cowork</span></h1>
+  <p class="lede">
+    A general-purpose AI platform for knowledge workers. Automate recurring tasks,
+    create artifacts, and deploy anywhere — on your terms.
+  </p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon">⚡</div>
+      <div class="card-tag">Guide</div>
+      <h3>Get Started</h3>
+      <p>Clone, install dependencies, and run the desktop or web app in under five minutes.</p>
+      <a href="setup.html" class="card-link">Setup guide →</a>
+    </div>
+    <div class="card">
+      <div class="card-icon">⬡</div>
+      <div class="card-tag">Reference</div>
+      <h3>API</h3>
+      <p>REST endpoints for conversations, projects, artifacts, schedules, connectors, and more.</p>
+      <a href="api.html" class="card-link">API reference →</a>
+    </div>
+    <div class="card">
+      <div class="card-icon">◈</div>
+      <div class="card-tag">Examples</div>
+      <h3>Use Cases</h3>
+      <p>See what creators, operators, and strategists are building with the platform.</p>
+      <a href="use-cases.html" class="card-link">Explore examples →</a>
+    </div>
+  </div>
+</div>
+
+<div class="arch-section">
+  <div class="section-label">Platform modules</div>
+  <div class="arch-grid">
+    <div class="arch-pill">
+      <div class="pill-name">frontend</div>
+      <div class="pill-desc">Electron + Vite desktop app. Also ships as a web SPA via <code>make dev-web</code>.</div>
+      <div class="pill-repo">github.com/mindsdb/cowork</div>
+    </div>
+    <div class="arch-pill">
+      <div class="pill-name">backend / core_api</div>
+      <div class="pill-desc">FastAPI server. Conversations, projects, artifacts, schedules, connectors.</div>
+      <div class="pill-repo">github.com/mindsdb/cowork-server</div>
+    </div>
+    <div class="arch-pill">
+      <div class="pill-name">backend / core_agent</div>
+      <div class="pill-desc">Anton — the autonomous coding and reasoning agent powering task execution.</div>
+      <div class="pill-repo">github.com/mindsdb/anton</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Minds Platform · Open Source · <a href="https://github.com/mindsdb/minds-platform">github.com/mindsdb/minds-platform</a>
+</footer>
+
+</body>
+</html>
