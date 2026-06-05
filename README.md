@@ -24,26 +24,34 @@
 
 ---
 
-## MINDS PLATFORM 
+## MINDS-COWORK PLATFORM 
 
-Minds Platform is dedicated to building an open foundation for frontier Artificial Intelligence, designed for developers, businesses, and individuals seeking AI systems they can truly control, extend and deploy anywhere (VPC, on-prem or Cloud).
-
+Minds Platform is dedicated to building a general-purpose AI designed for knowledge workers — creators, strategists, and operators — and individuals seeking AI systems they can truly control to help them get work done, with full flexibility to extend and deploy anywhere (VPC, on-prem, or cloud).
 
 
 
 # USE CASES
 
-- Automated reporting, recurring workflows, and operational task execution
-- Embeddable conversational business intelligence
-- Search across large knowledge bases; documents, tickets, etc
-- Search and Analyze data across large knowledge bases; documents, tickets, etc
-- AI operations assistants for sales, support, finance, and engineering teams
-- Large scale Enterprise AI systems combining memory, retrieval, reasoning, and execution
+
+**For every knowledge worker**
+- **Automate** any repetitive multi-step task that involves reading and writing (reports, monitoring, workflows)
+- **Build** internal AI tools/artifacts without engineering and deploy to your team (apps, decks, docs, analyses)
 
 ---
 
 # GET STARTED
 
+### Desktop App:
+Simplest way to use this is the latest build App, available on web or desktop:
+
+- **web**: Click [here to register/login](https://mindshub.ai) the Minds-cowork app, packaged and ready for you in one click.
+
+- **macOS**: Click [here to download](https://downloads.mindsdb.com/anton/mac/anton-latest.pkg) the Minds-cowork for MacOS.
+
+- **Windows**: Click [here to download](https://downloads.mindsdb.com/anton/windows/anton-latest.exe) the Minds-cowork for Windows.
+ 
+
+### Build from source:
 **1. Clone the repository**
 ```bash
 git clone --recurse-submodules https://github.com/mindsdb/minds-platform.git
