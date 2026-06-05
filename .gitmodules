@@ -1,3 +1,9 @@
 [submodule "frontend"]
 	path = frontend
 	url = https://github.com/mindsdb/cowork
+[submodule "backend/core_api"]
+	path = backend/core_api
+	url = https://github.com/mindsdb/cowork-server
+[submodule "backend/core_agent"]
+	path = backend/core_agent
+	url = https://github.com/mindsdb/anton
