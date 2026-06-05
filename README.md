@@ -24,13 +24,13 @@
 
 ---
 
-## MINDS-COWORK PLATFORM 
+# MINDS-COWORK PLATFORM 
 
 Minds Platform is dedicated to building a general-purpose AI designed for knowledge workers — creators, strategists, and operators — and individuals seeking AI systems they can truly control to help them get work done, with full flexibility to extend and deploy anywhere (VPC, on-prem, or cloud).
 
 
 
-# USE CASES
+## USE CASES
 
 
 **For every knowledge worker**
@@ -39,7 +39,7 @@ Minds Platform is dedicated to building a general-purpose AI designed for knowle
 
 ---
 
-# GET STARTED
+## GET STARTED
 
 ### Desktop App:
 Simplest way to use this is the latest build App, available on web or desktop:
@@ -75,7 +75,7 @@ make setup
 
 ---
 
-# DEPLOY ANYWHERE
+## DEPLOY ANYWHERE
 
 Minds Platform is designed for flexible deployment across:
 
