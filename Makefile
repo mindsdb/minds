@@ -22,15 +22,15 @@ setup: $(_NPM_STAMP) $(_API_STAMP) $(_AGENT_STAMP)
 dev: $(_NPM_STAMP) $(_API_STAMP) $(_AGENT_STAMP)
 	@trap 'kill 0' SIGINT SIGTERM EXIT; \
 	uv run --directory $(API) uvicorn cowork.server:app --reload \
-		--reload-dir $(API)/cowork \
-		--reload-dir $(AGENT)/anton & \
+		--reload-dir $(CURDIR)/$(API)/cowork \
+		--reload-dir $(CURDIR)/$(AGENT)/anton & \
 	npm --prefix $(FRONTEND) run dev
 
 dev-web: $(_NPM_STAMP) $(_API_STAMP) $(_AGENT_STAMP)
 	@trap 'kill 0' SIGINT SIGTERM EXIT; \
 	uv run --directory $(API) uvicorn cowork.server:app --reload \
-		--reload-dir $(API)/cowork \
-		--reload-dir $(AGENT)/anton & \
+		--reload-dir $(CURDIR)/$(API)/cowork \
+		--reload-dir $(CURDIR)/$(AGENT)/anton & \
 	cd $(FRONTEND) && BUILD_TARGET=web npm run dev:renderer -- --open
 
 build: $(_NPM_STAMP)
